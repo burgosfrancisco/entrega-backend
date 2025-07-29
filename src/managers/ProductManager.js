@@ -1,7 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
+const fs = require('fs').promises;
+const path = require('path');
 
-export default class ProductManager {
+class ProductManager {
   constructor(filePath) {
     this.path = path.resolve(filePath);
   }
@@ -42,14 +42,12 @@ export default class ProductManager {
     const index = products.findIndex(p => p.id == id);
     if (index === -1) return null;
 
-    // No permitir actualizar ID
     delete updatedFields.id;
     products[index] = { ...products[index], ...updatedFields };
 
     await this.#saveFile(products);
     return products[index];
   }
-
   async deleteProduct(id) {
     const products = await this.#loadFile();
     const newProducts = products.filter(p => p.id != id);
@@ -59,4 +57,4 @@ export default class ProductManager {
     return true;
   }
 }
-// aca termina el codigo
+module.exports = ProductManager;

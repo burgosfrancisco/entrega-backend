@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": 1,
+    "title": "Producto de prueba",
+    "description": "Un producto de ejemplo",
+    "code": "abc123",
+    "price": 100,
+    "status": true,
+    "stock": 10,
+    "category": "ejemplo",
+    "thumbnails": []
+  }
+]

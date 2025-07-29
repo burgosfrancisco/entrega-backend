@@ -1,7 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
+const fs = require('fs').promises;
+const path = require('path');
 
-export default class CartManager {
+class CartManager {
   constructor(filePath) {
     this.path = path.resolve(filePath);
   }
@@ -49,3 +49,6 @@ export default class CartManager {
     return cart;
   }
 }
+
+module.exports = CartManager;
+
