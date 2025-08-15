@@ -4,15 +4,14 @@ import Cart from '../models/Cart.js';
 
 const router = Router();
 
-// 👉 raíz
+// raíz
 router.get('/', (req, res) => res.redirect('/products'));
 
-// /products con paginación + filtros + sort
+// LISTADO /products con paginación + filtros + sort (y preserva cid)
 router.get('/products', async (req, res, next) => {
   try {
     const { limit = 10, page = 1, sort, query, cid } = req.query;
 
-    // Filtros por category/status
     const filter = {};
     if (query) {
       const [k, v] = String(query).split(':');
@@ -23,7 +22,6 @@ router.get('/products', async (req, res, next) => {
     const lim = Math.max(parseInt(limit) || 10, 1);
     const pg  = Math.max(parseInt(page)  || 1, 1);
 
-    // Orden por precio
     let sortOpt;
     if (sort === 'asc')  sortOpt = { price: 1 };
     if (sort === 'desc') sortOpt = { price: -1 };
@@ -41,7 +39,6 @@ router.get('/products', async (req, res, next) => {
     const hasPrev = currentPage > 1;
     const hasNext = currentPage < totalPages;
 
-    // Links de paginación conservando filtros y cid
     const buildLink = (p) => {
       const s = new URLSearchParams();
       s.set('page', p);
@@ -56,45 +53,35 @@ router.get('/products', async (req, res, next) => {
       products,
       page: currentPage,
       totalPages,
-      hasPrev,
-      hasNext,
+      hasPrev, hasNext,
       prevLink: hasPrev ? buildLink(currentPage - 1) : null,
       nextLink: hasNext ? buildLink(currentPage + 1) : null,
-      // para mantener valores del form
       query,
       limit: lim,
       isSortAsc: sort === 'asc',
       isSortDesc: sort === 'desc',
       cartId: cid || null
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
-// Detalle de producto
+// DETALLE
 router.get('/products/:pid', async (req, res, next) => {
   try {
     const cid = req.query.cid || null;
     const product = await Product.findById(req.params.pid).lean();
     if (!product) return res.status(404).send('Producto no encontrado');
     res.render('product', { product, cartId: cid });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
-// Vista del carrito
+// CARRITO
 router.get('/carts/:cid', async (req, res, next) => {
   try {
-    const cart = await Cart.findById(req.params.cid)
-      .populate('products.product')
-      .lean();
+    const cart = await Cart.findById(req.params.cid).populate('products.product').lean();
     if (!cart) return res.status(404).send('Carrito no encontrado');
     res.render('cart', { cart });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 export default router;

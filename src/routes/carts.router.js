@@ -4,7 +4,7 @@ import Product from '../models/Product.js';
 
 const router = Router();
 
-// Crear carrito (helper)
+// Crear carrito (helper opcional)
 router.post('/', async (req, res, next) => {
   try {
     const cart = await Cart.create({ products: [] });
@@ -21,7 +21,7 @@ router.get('/:cid', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /api/carts/:cid/products/:pid  (agrega o incrementa)
+// POST /api/carts/:cid/products/:pid (agrega o incrementa)
 router.post('/:cid/products/:pid', async (req, res, next) => {
   try {
     const { cid, pid } = req.params;
@@ -40,7 +40,7 @@ router.post('/:cid/products/:pid', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// DELETE /api/carts/:cid/products/:pid
+// DELETE /api/carts/:cid/products/:pid  (elimina un producto del carrito)
 router.delete('/:cid/products/:pid', async (req, res, next) => {
   try {
     const { cid, pid } = req.params;
@@ -53,14 +53,14 @@ router.delete('/:cid/products/:pid', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PUT /api/carts/:cid  (reemplaza todo el arreglo)
+// PUT /api/carts/:cid  (reemplaza todo el arreglo de products)
 router.put('/:cid', async (req, res, next) => {
   try {
     const { products } = req.body;
-    if (!Array.isArray(products)) throw new Error('products debe ser un array');
+    if (!Array.isArray(products)) return res.status(400).json({ status: 'error', error: 'products debe ser un array' });
 
     for (const it of products) {
-      if (!it.product) throw new Error('Falta product en un item');
+      if (!it.product) return res.status(400).json({ status: 'error', error: 'Falta product en un item' });
       if (!it.quantity || it.quantity < 1) it.quantity = 1;
     }
 
@@ -75,21 +75,23 @@ router.put('/:cid', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PUT /api/carts/:cid/products/:pid  (setea cantidad)
+// PUT /api/carts/:cid/products/:pid  (actualiza SOLO la cantidad)
 router.put('/:cid/products/:pid', async (req, res, next) => {
   try {
-    const q = parseInt(req.body.quantity);
-    if (!Number.isInteger(q) || q < 1) throw new Error('Cantidad inválida');
+    const { cid, pid } = req.params;
+    const { quantity } = req.body;
+    const qty = parseInt(quantity);
 
-    const cart = await Cart.findById(req.params.cid);
+    if (!Number.isFinite(qty) || qty < 1) return res.status(400).json({ status: 'error', error: 'quantity inválida' });
+
+    const cart = await Cart.findById(cid);
     if (!cart) return res.status(404).json({ status: 'error', error: 'Carrito no encontrado' });
 
-    const idx = cart.products.findIndex(p => p.product.toString() === req.params.pid);
-    if (idx < 0) return res.status(404).json({ status: 'error', error: 'Producto no está en el carrito' });
+    const item = cart.products.find(p => p.product.toString() === pid);
+    if (!item) return res.status(404).json({ status: 'error', error: 'Producto no está en el carrito' });
 
-    cart.products[idx].quantity = q;
+    item.quantity = qty;
     await cart.save();
-
     res.json({ status: 'success', payload: cart });
   } catch (e) { next(e); }
 });

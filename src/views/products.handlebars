@@ -17,7 +17,6 @@
     <li style="margin-bottom:.5rem;">
       <strong>{{this.title}}</strong> — ${{this.price}} — {{this.category}}
       <a href="/products/{{this._id}}{{#if ../../cartId}}?cid={{../../cartId}}{{/if}}">Ver detalle</a>
-
       {{#if ../../cartId}}
         <form action="/api/carts/{{../../cartId}}/products/{{this._id}}" method="post" style="display:inline;">
           <button type="submit">Agregar al carrito</button>
@@ -32,4 +31,3 @@
   <span> Página {{page}} de {{totalPages}} </span>
   {{#if hasNext}}<a href="{{nextLink}}">Siguiente »</a>{{/if}}
 </nav>
-

@@ -12,73 +12,73 @@ router.get('/', async (req, res, next) => {
     const pg  = Math.max(parseInt(page)  || 1, 1);
 
     // query: "category:Remeras" | "status:true/false"
-    let filter = {};
+    const filter = {};
     if (query) {
-      const [key, raw] = String(query).split(':');
-      if (key === 'category' && raw) filter.category = raw;
-      if (key === 'status' && ['true','false'].includes(raw)) filter.status = (raw === 'true');
+      const [k, v] = String(query).split(':');
+      if (k === 'category' && v) filter.category = v;
+      if (k === 'status' && ['true', 'false'].includes(v)) filter.status = (v === 'true');
     }
 
     let sortOpt;
-    if (sort === 'asc') sortOpt = { price: 1 };
+    if (sort === 'asc')  sortOpt = { price: 1 };
     if (sort === 'desc') sortOpt = { price: -1 };
 
-    const totalDocs = await Product.countDocuments(filter);
-    const totalPages = Math.max(Math.ceil(totalDocs / lim), 1);
-    const currentPage = Math.min(pg, totalPages);
-
-    const payload = await Product.find(filter)
+    const total = await Product.countDocuments(filter);
+    const totalPages = Math.max(Math.ceil(total / lim), 1);
+    const pageSafe = Math.min(pg, totalPages);
+    const products = await Product.find(filter)
       .sort(sortOpt)
-      .skip((currentPage - 1) * lim)
+      .skip((pageSafe - 1) * lim)
       .limit(lim)
       .lean();
 
-    const hasPrevPage = currentPage > 1;
-    const hasNextPage = currentPage < totalPages;
-    const link = (p) => {
+    const hasPrev = pageSafe > 1;
+    const hasNext = pageSafe < totalPages;
+
+    const buildLink = (p) => {
       const s = new URLSearchParams();
-      s.set('page', p); s.set('limit', lim);
+      s.set('page', p);
+      s.set('limit', lim);
       if (sort)  s.set('sort', sort);
       if (query) s.set('query', query);
       return `/api/products?${s.toString()}`;
     };
 
-    res.json({
+    return res.json({
       status: 'success',
-      payload,
+      payload: products,
       totalPages,
-      prevPage: hasPrevPage ? currentPage - 1 : null,
-      nextPage: hasNextPage ? currentPage + 1 : null,
-      page: currentPage,
-      hasPrevPage,
-      hasNextPage,
-      prevLink: hasPrevPage ? link(currentPage - 1) : null,
-      nextLink: hasNextPage ? link(currentPage + 1) : null
+      prevPage: hasPrev ? pageSafe - 1 : null,
+      nextPage: hasNext ? pageSafe + 1 : null,
+      page: pageSafe,
+      hasPrevPage: hasPrev,
+      hasNextPage: hasNext,
+      prevLink: hasPrev ? buildLink(pageSafe - 1) : null,
+      nextLink: hasNext ? buildLink(pageSafe + 1) : null
     });
   } catch (e) { next(e); }
 });
 
-// GET /api/products/:pid
-router.get('/:pid', async (req, res, next) => {
+// (CRUD opcional para pruebas)
+router.post('/', async (req, res, next) => {
   try {
-    const prod = await Product.findById(req.params.pid).lean();
+    const prod = await Product.create(req.body);
+    res.status(201).json({ status: 'success', payload: prod });
+  } catch (e) { next(e); }
+});
+router.put('/:pid', async (req, res, next) => {
+  try {
+    const prod = await Product.findByIdAndUpdate(req.params.pid, req.body, { new: true, runValidators: true });
     if (!prod) return res.status(404).json({ status: 'error', error: 'Producto no encontrado' });
     res.json({ status: 'success', payload: prod });
   } catch (e) { next(e); }
 });
-
-// (opcionales para cargar datos por API)
-router.post('/', async (req, res, next) => {
-  try { const prod = await Product.create(req.body); res.status(201).json({ status: 'success', payload: prod }); }
-  catch (e) { next(e); }
-});
-router.put('/:pid', async (req, res, next) => {
-  try { const prod = await Product.findByIdAndUpdate(req.params.pid, req.body, { new: true }); if(!prod) return res.status(404).json({ status:'error', error:'Producto no encontrado' }); res.json({ status:'success', payload: prod }); }
-  catch (e) { next(e); }
-});
 router.delete('/:pid', async (req, res, next) => {
-  try { const prod = await Product.findByIdAndDelete(req.params.pid); if(!prod) return res.status(404).json({ status:'error', error:'Producto no encontrado' }); res.json({ status:'success', message:'Producto eliminado' }); }
-  catch (e) { next(e); }
+  try {
+    const prod = await Product.findByIdAndDelete(req.params.pid);
+    if (!prod) return res.status(404).json({ status: 'error', error: 'Producto no encontrado' });
+    res.json({ status: 'success', message: 'Producto eliminado' });
+  } catch (e) { next(e); }
 });
 
 export default router;
