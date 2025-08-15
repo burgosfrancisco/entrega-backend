@@ -1,0 +1,35 @@
+<h1>Productos</h1>
+
+<form method="get" action="/products" style="margin-bottom:1rem;">
+  <input type="text" name="query" placeholder="category:Remeras o status:true" value="{{query}}" />
+  <select name="sort">
+    <option value="">Sin orden</option>
+    <option value="asc" {{#if isSortAsc}}selected{{/if}}>Precio asc</option>
+    <option value="desc" {{#if isSortDesc}}selected{{/if}}>Precio desc</option>
+  </select>
+  <input type="number" name="limit" min="1" value="{{limit}}" />
+  {{#if cartId}}<input type="hidden" name="cid" value="{{cartId}}" />{{/if}}
+  <button type="submit">Aplicar</button>
+</form>
+
+<ul>
+  {{#each products}}
+    <li style="margin-bottom:.5rem;">
+      <strong>{{this.title}}</strong> — ${{this.price}} — {{this.category}}
+      <a href="/products/{{this._id}}{{#if ../../cartId}}?cid={{../../cartId}}{{/if}}">Ver detalle</a>
+
+      {{#if ../../cartId}}
+        <form action="/api/carts/{{../../cartId}}/products/{{this._id}}" method="post" style="display:inline;">
+          <button type="submit">Agregar al carrito</button>
+        </form>
+      {{/if}}
+    </li>
+  {{/each}}
+</ul>
+
+<nav style="margin-top:1rem;">
+  {{#if hasPrev}}<a href="{{prevLink}}">« Anterior</a>{{/if}}
+  <span> Página {{page}} de {{totalPages}} </span>
+  {{#if hasNext}}<a href="{{nextLink}}">Siguiente »</a>{{/if}}
+</nav>
+

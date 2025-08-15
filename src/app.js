@@ -1,52 +1,55 @@
-const express = require('express');
-const { Server } = require('socket.io');
-const handlebars = require('express-handlebars');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
 
-const productRouter = require('./routes/product.router');
-const cartRouter = require('./routes/carts.router');
-const viewsRouter = require('./routes/views.router');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import exphbs from 'express-handlebars';
+import morgan from 'morgan';
+import cors from 'cors';
+import methodOverride from 'method-override';
 
-const ProductManager = require('./managers/ProductManager');
-const productManager = new ProductManager('./src/data/products.json');
+import { connectDB } from './db.js';
+import productsRouter from './routes/products.router.js';
+import cartsRouter from './routes/carts.router.js';
+import viewsRouter from './routes/views.router.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 8080;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
+app.use(cors());
+app.use(methodOverride('_method'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de Handlebars
-app.engine('handlebars', handlebars.engine());
+// Handlebars
+app.engine('handlebars', exphbs.engine());
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
-// Rutas
-app.use('/api/products', productRouter);
-app.use('/api/carts', cartRouter);
+// Rutas API
+app.use('/api/products', productsRouter);
+app.use('/api/carts', cartsRouter);
+
+// Vistas
 app.use('/', viewsRouter);
 
-// Servidor HTTP + WebSocket
-const httpServer = app.listen(PORT, () => {
-  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+// Errores
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 400).json({ status: 'error', error: err.message || 'Error' });
 });
 
-const io = new Server(httpServer);
-app.set('io', io);
+const PORT = process.env.PORT || 8080;
 
-// WebSocket connection
-io.on('connection', async socket => {
-  console.log('🟢 Nuevo cliente conectado');
-
-  socket.emit('products', await productManager.getProducts());
-
-  socket.on('newProduct', async product => {
-    await productManager.addProduct(product);
-    io.emit('products', await productManager.getProducts());
+// ❗ Conectamos a Mongo UNA sola vez y recién después levantamos el server
+connectDB()
+  .then(() => app.listen(PORT, () => console.log(`🚀 Server: http://localhost:${PORT}`)))
+  .catch(err => {
+    console.error('❌ No se pudo iniciar el server:', err);
+    process.exit(1);
   });
-
-  socket.on('deleteProduct', async id => {
-    await productManager.deleteProduct(id);
-    io.emit('products', await productManager.getProducts());
-  });
-});
