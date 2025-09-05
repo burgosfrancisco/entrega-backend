@@ -9,7 +9,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import methodOverride from 'method-override';
 
-import { connectDB } from './db.js';
+import { connectDB } from './config/db.js';
 import productsRouter from './routes/products.router.js';
 import cartsRouter from './routes/carts.router.js';
 import viewsRouter from './routes/views.router.js';

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import Product from '../models/Product.js';
+import { body } from 'express-validator';
+import { validate } from '../middlewares/validate.js';
 
 const router = Router();
 
@@ -59,20 +61,45 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// (CRUD opcional para pruebas)
-router.post('/', async (req, res, next) => {
-  try {
-    const prod = await Product.create(req.body);
-    res.status(201).json({ status: 'success', payload: prod });
-  } catch (e) { next(e); }
-});
-router.put('/:pid', async (req, res, next) => {
-  try {
-    const prod = await Product.findByIdAndUpdate(req.params.pid, req.body, { new: true, runValidators: true });
-    if (!prod) return res.status(404).json({ status: 'error', error: 'Producto no encontrado' });
-    res.json({ status: 'success', payload: prod });
-  } catch (e) { next(e); }
-});
+// Crear producto con validaciones
+router.post(
+  '/',
+  [
+    body('title').notEmpty().withMessage('El título es obligatorio'),
+    body('price').isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
+    body('stock').optional().isInt({ min: 0 }).withMessage('El stock no puede ser negativo'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const prod = await Product.create(req.body);
+      res.status(201).json({ status: 'success', payload: prod });
+    } catch (e) { next(e); }
+  }
+);
+
+// Actualizar producto con validaciones
+router.put(
+  '/:pid',
+  [
+    body('price').optional().isFloat({ gt: 0 }).withMessage('El precio debe ser mayor a 0'),
+    body('stock').optional().isInt({ min: 0 }).withMessage('El stock no puede ser negativo'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const prod = await Product.findByIdAndUpdate(
+        req.params.pid,
+        req.body,
+        { new: true, runValidators: true }
+      );
+      if (!prod) return res.status(404).json({ status: 'error', error: 'Producto no encontrado' });
+      res.json({ status: 'success', payload: prod });
+    } catch (e) { next(e); }
+  }
+);
+
+// Borrar producto
 router.delete('/:pid', async (req, res, next) => {
   try {
     const prod = await Product.findByIdAndDelete(req.params.pid);
